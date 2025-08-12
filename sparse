@@ -1,0 +1,59 @@
+#include <stdio.h>
+
+// Structure for triple representation
+struct triple {
+    int row;
+    int col;
+    int value;
+};
+
+int main() {
+    int m, n;
+    printf("Enter number of rows and columns of a matrix: ");
+    scanf("%d %d", &m, &n);
+
+    int matrix[m][n];
+    printf("Enter the matrix elements:\n");
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            scanf("%d", &matrix[i][j]);
+        }
+    }
+
+    // Count non-zero elements
+    int nonZero = 0;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            if (matrix[i][j] != 0) {
+                nonZero++;
+            }
+        }
+    }
+
+    // Sparse matrix triple representation
+    struct triple sparse[nonZero + 1];
+    sparse[0].row = m;
+    sparse[0].col = n;
+    sparse[0].value = nonZero;
+
+    int k = 1;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            if (matrix[i][j] != 0) {
+                sparse[k].row = i;
+                sparse[k].col = j;
+                sparse[k].value = matrix[i][j];
+                k++;
+            }
+        }
+    }
+
+    // Display triple form
+    printf("\nSparse Matrix in Triple Form:\n");
+    printf("ROW\tCOL\tVALUE\n");
+    for (int i = 0; i <= nonZero; i++) {
+        printf("%d\t%d\t%d\n", sparse[i].row, sparse[i].col, sparse[i].value);
+    }
+
+    return 0;
+}
