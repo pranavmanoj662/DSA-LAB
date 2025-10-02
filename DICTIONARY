@@ -1,0 +1,210 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h> 
+
+// Define fixed sizes for simplicity
+#define MAX_WORD_LEN 50
+#define MAX_MEANING_LEN 150
+
+// ----------------------
+// Simplified Structure for a BST Node
+// ----------------------
+struct DictionaryNode {
+    char word[MAX_WORD_LEN];  // The key (word), used for sorting
+    char meaning[MAX_MEANING_LEN]; // The value (definition)
+    struct DictionaryNode* left;
+    struct DictionaryNode* right;
+};
+
+// Function to create a new dictionary node
+struct DictionaryNode* newNode(const char* word, const char* meaning) {
+    struct DictionaryNode* node = (struct DictionaryNode*)malloc(sizeof(struct DictionaryNode));
+    
+    // Check if allocation failed (optional but good practice)
+    if (node == NULL) {
+        perror("Failed to allocate memory for new node");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Copy the strings, ensuring they don't overflow the buffer
+    strncpy(node->word, word, MAX_WORD_LEN - 1);
+    node->word[MAX_WORD_LEN - 1] = '\0'; // Ensure null termination
+
+    strncpy(node->meaning, meaning, MAX_MEANING_LEN - 1);
+    node->meaning[MAX_MEANING_LEN - 1] = '\0';
+
+    node->left = node->right = NULL;
+    return node;
+}
+
+// ----------------------
+// Insert Function (Recursive BST Insertion)
+// ----------------------
+struct DictionaryNode* insertWord(struct DictionaryNode* root, const char* word, const char* meaning) {
+    // 1. Base case: If the tree is empty, create the new node here.
+    if (root == NULL) {
+        return newNode(word, meaning);
+    }
+
+    // Compare the new word with the current node's word
+    int cmp = strcmp(word, root->word);
+
+    // 2. If the new word is alphabetically smaller, go left
+    if (cmp < 0) {
+        root->left = insertWord(root->left, word, meaning);
+    }
+    // 3. If the new word is alphabetically larger, go right
+    else if (cmp > 0) {
+        root->right = insertWord(root->right, word, meaning);
+    }
+    // 4. If the word already exists (cmp == 0), update its meaning
+    else {
+        // Overwrite the old meaning
+        strncpy(root->meaning, meaning, MAX_MEANING_LEN - 1);
+        root->meaning[MAX_MEANING_LEN - 1] = '\0';
+        printf("Dictionary: Word '%s' updated.\n", word);
+    }
+
+    return root;
+}
+
+// ----------------------
+// Search Function (Recursive BST Search)
+// ----------------------
+const char* searchWord(struct DictionaryNode* root, const char* word) {
+    // Base case: Word not found (or tree is empty)
+    if (root == NULL) {
+        return NULL;
+    }
+
+    int cmp = strcmp(word, root->word);
+
+    // 1. Word found
+    if (cmp == 0) {
+        return root->meaning;
+    }
+    // 2. Search left
+    else if (cmp < 0) {
+        return searchWord(root->left, word);
+    }
+    // 3. Search right
+    else { // cmp > 0
+        return searchWord(root->right, word);
+    }
+}
+
+// ----------------------
+// Traversal Function (Inorder gives sorted output)
+// ----------------------
+void inorderTraversal(struct DictionaryNode* root) {
+    if (root != NULL) {
+        inorderTraversal(root->left); // Go left (smaller words)
+        
+        // Visit node (print word and meaning)
+        printf("  %-15s: %s\n", root->word, root->meaning);
+
+        inorderTraversal(root->right); // Go right (larger words)
+    }
+}
+
+// ----------------------
+// Cleanup Function (Freeing memory)
+// ----------------------
+void freeTree(struct DictionaryNode* root) {
+    if (root != NULL) {
+        freeTree(root->left);
+        freeTree(root->right);
+        free(root);
+    }
+}
+
+
+// ----------------------
+// Main Function
+// ----------------------
+int main() {
+    struct DictionaryNode* root = NULL;
+    int choice;
+    char input_word[MAX_WORD_LEN];
+    char input_meaning[MAX_MEANING_LEN];
+    const char* result_meaning;
+
+    printf("--- Binary Search Tree Dictionary ---\n");
+    
+    do {
+        printf("\nMENU:\n");
+        printf("1. Insert/Update Word\n");
+        printf("2. Search Word\n");
+        printf("3. Display All Words (Alphabetical Order)\n");
+        printf("4. Exit\n");
+        printf("Enter your choice: ");
+        
+        // Read menu choice
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            // Clear input buffer on error
+            while (getchar() != '\n');
+            continue;
+        }
+
+        // Clear the newline character left in the buffer by scanf
+        // This is important before reading strings with scanf/fgets later
+        while (getchar() != '\n'); 
+
+        switch (choice) {
+            case 1: // Insert/Update
+                printf("Enter word (no spaces): ");
+                // Using scanf for word since MAX_WORD_LEN is small and keys usually lack spaces
+                if (scanf("%s", input_word) != 1) continue; 
+                while (getchar() != '\n'); // Clear buffer
+                
+                printf("Enter meaning: ");
+                // Using fgets for meaning to allow spaces, but it includes the newline
+                if (fgets(input_meaning, MAX_MEANING_LEN, stdin) == NULL) continue;
+                // Remove trailing newline character from fgets
+                input_meaning[strcspn(input_meaning, "\n")] = 0;
+
+                root = insertWord(root, input_word, input_meaning);
+                printf("Successfully processed '%s'.\n", input_word);
+                break;
+
+            case 2: // Search
+                printf("Enter word to search: ");
+                if (scanf("%s", input_word) != 1) continue;
+                while (getchar() != '\n');
+                
+                result_meaning = searchWord(root, input_word);
+                
+                printf("----------------------------------------\n");
+                if (result_meaning) {
+                    printf("'%s' means: %s\n", input_word, result_meaning);
+                } else {
+                    printf("Word '%s' not found in the dictionary.\n", input_word);
+                }
+                printf("----------------------------------------\n");
+                break;
+
+            case 3: // Display
+                printf("\n--- DICTIONARY CONTENTS ---\n");
+                if (root == NULL) {
+                    printf("The dictionary is empty.\n");
+                } else {
+                    inorderTraversal(root);
+                }
+                printf("---------------------------\n");
+                break;
+
+            case 4: // Exit
+                printf("Exiting program. Cleaning up memory...\n");
+                freeTree(root);
+                break;
+
+            default:
+                printf("Invalid option. Please choose between 1 and 4.\n");
+        }
+    } while (choice != 4);
+
+    return 0;
+}
+
+
