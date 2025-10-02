@@ -1,0 +1,182 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>   // for isalnum()
+
+// ----------------------
+// Structure for a tree node
+// ----------------------
+struct Node {
+    char data;              // data (operator or operand)
+    struct Node* left;      // left child
+    struct Node* right;     // right child
+};
+
+// Function to create a new tree node (simplified: removed allocation check)
+struct Node* newNode(char data) {
+    struct Node* node = (struct Node*)malloc(sizeof(struct Node));
+    node->data = data;
+    node->left = node->right = NULL;
+    return node;
+}
+
+// ----------------------
+// Precedence of operators
+// ----------------------
+int precedence(char op) {
+    if (op == '+' || op == '-') return 1;
+    if (op == '*' || op == '/') return 2;
+    if (op == '^') return 3;
+    return 0; // Default precedence for non-operators and parentheses
+}
+
+// ----------------------
+// Build an Expression Tree from an Infix Expression
+// Note: This simplified version relies on well-formed input and assumes
+// stack sizes are sufficient.
+// ----------------------
+struct Node* buildTreeFromInfix(char* infix) {
+    // Stacks implemented using simple arrays (maximum size 100)
+    struct Node* nodeStack[100];  // stack of nodes (operands and subtrees)
+    int nodeTop = -1;
+
+    char opStack[100];           // stack of operators
+    int opTop = -1;
+
+    // Loop over every character in the infix expression
+    for (int i = 0; infix[i] != '\0'; i++) {
+        char c = infix[i];
+
+        // Case 1: Operand (A, B, 1, 2, ...)
+        if (isalnum(c)) {
+            nodeStack[++nodeTop] = newNode(c);  // Push operand as a single node
+        }
+
+        // Case 2: Left parenthesis '('
+        else if (c == '(') {
+            opStack[++opTop] = c;              // Push '(' to operator stack
+        }
+
+        // Case 3: Right parenthesis ')'
+        else if (c == ')') {
+            // Process operators until the matching '(' is found
+            while (opTop != -1 && opStack[opTop] != '(') {
+                struct Node* opNode = newNode(opStack[opTop--]);
+
+                // Pop two nodes from the node stack to form the subtree
+                struct Node* right = nodeStack[nodeTop--];
+                struct Node* left = nodeStack[nodeTop--];
+
+                opNode->right = right;
+                opNode->left = left;
+                nodeStack[++nodeTop] = opNode; // Push the new subtree root
+            }
+            opTop--; // Discard '('
+        }
+
+        // Case 4: Operator (+, -, *, /, ^)
+        else {
+            // While the stack top operator has higher or equal precedence, process it
+            while (opTop != -1 && precedence(opStack[opTop]) >= precedence(c)) {
+                struct Node* opNode = newNode(opStack[opTop--]);
+
+                // Pop two nodes and build the subtree
+                struct Node* right = nodeStack[nodeTop--];
+                struct Node* left = nodeStack[nodeTop--];
+
+                opNode->right = right;
+                opNode->left = left;
+                nodeStack[++nodeTop] = opNode;
+            }
+            // Push the current operator
+            opStack[++opTop] = c;
+        }
+    }
+
+    // Process any remaining operators after the expression is scanned
+    while (opTop != -1) {
+        struct Node* opNode = newNode(opStack[opTop--]);
+
+        struct Node* right = nodeStack[nodeTop--];
+        struct Node* left = nodeStack[nodeTop--];
+
+        opNode->right = right;
+        opNode->left = left;
+        nodeStack[++nodeTop] = opNode;
+    }
+
+    // The final node remaining in the node stack is the root of the expression tree
+    if (nodeTop == 0) {
+        return nodeStack[nodeTop];
+    }
+    return NULL; // Error
+}
+
+// ----------------------
+// Traversal Functions
+// ----------------------
+
+// Inorder traversal → infix form (prints extra parentheses for clarity)
+void inorder(struct Node* root) {
+    if (root) {
+        if (!isalnum(root->data)) printf("(");
+        inorder(root->left);
+        printf("%c", root->data);
+        inorder(root->right);
+        if (!isalnum(root->data)) printf(")");
+    }
+}
+
+// Preorder traversal → prefix form
+void preorder(struct Node* root) {
+    if (root) {
+        printf("%c", root->data);
+        preorder(root->left);
+        preorder(root->right);
+    }
+}
+
+// Postorder traversal → postfix form
+void postorder(struct Node* root) {
+    if (root) {
+        postorder(root->left);
+        postorder(root->right);
+        printf("%c", root->data);
+    }
+}
+
+// ----------------------
+// Main Function
+// ----------------------
+int main() {
+    char infix[100];
+
+    printf("Enter an infix expression (e.g., A*(B+C)): ");
+    if (scanf("%s", infix) != 1) {
+        return 1;
+    }
+
+    // Build tree
+    struct Node* root = buildTreeFromInfix(infix);
+
+    // Display traversals
+    if (root) {
+        printf("\n--- Results ---\n");
+
+        printf("Infix   : ");
+        inorder(root);
+        printf("\n");
+
+        printf("Prefix  : ");
+        preorder(root);
+        printf("\n");
+
+        printf("Postfix : ");
+        postorder(root);
+        printf("\n");
+    } else {
+        printf("Error: Could not build expression tree (malformed expression).\n");
+    }
+    // Note: Memory cleanup (freeTree) is removed for simplicity.
+
+    return 0;
+}
